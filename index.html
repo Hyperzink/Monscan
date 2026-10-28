@@ -1,1 +1,143 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>MonScan — Moncton Pokémon Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #101827;
+      color: #f8fafc;
+    }
+    header { padding: 18px; background: #182338; }
+    h1 { margin: 0; font-size: 26px; }
+    header p { margin: 5px 0 0; color: #b9c5d8; font-size: 14px; }
+    .controls { padding: 14px; display: grid; gap: 10px; }
+    input, select, button {
+      width: 100%; padding: 12px; border-radius: 10px;
+      border: 1px solid #39465c; font-size: 16px;
+    }
+    input, select { background: #202d42; color: white; }
+    button { background: #31d583; color: #102019; border: 0; font-weight: 700; }
+    #map { height: 53vh; min-height: 330px; }
+    .notice { padding: 12px 16px; font-size: 12px; color: #c7d2e3; }
+    .results { padding: 14px; }
+    .pokemon {
+      background: #202d42; border-radius: 12px;
+      padding: 13px; margin: 9px 0; cursor: pointer;
+    }
+    .pokemon strong { font-size: 16px; }
+    .stats { color: #b9c5d8; font-size: 13px; margin-top: 5px; }
+    .tag { color: #31d583; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🗺️ MonScan</h1>
+    <p>Pokémon map · Moncton, New Brunswick</p>
+  </header>
+
+  <section class="controls">
+    <input id="search" placeholder="Search Pokémon..." aria-label="Search Pokémon">
+    <select id="iv">
+      <option value="0">All IV percentages</option>
+      <option value="90">90% IV and above</option>
+      <option value="80">80% IV and above</option>
+      <option value="70">70% IV and above</option>
+    </select>
+    <button id="locate">📍 Find my location</button>
+  </section>
+
+  <div id="map"></div>
+  <div class="notice">
+    DEMO MODE: Markers are examples, not verified live sightings.
+    Never trespass or enter unsafe areas.
+  </div>
+  <section class="results">
+    <h2>Pokémon sightings</h2>
+    <div id="list"></div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([46.0878, -64.7782], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    const pokemon = [
+      {name:'Pikachu', iv:96, lat:46.0878, lng:-64.7782},
+      {name:'Eevee', iv:88, lat:46.0950, lng:-64.7650},
+      {name:'Charmander', iv:74, lat:46.0800, lng:-64.7900},
+      {name:'Bulbasaur', iv:91, lat:46.1020, lng:-64.7850},
+      {name:'Squirtle', iv:82, lat:46.0730, lng:-64.7700},
+      {name:'Snorlax', iv:67, lat:46.0900, lng:-64.8000}
+    ];
+
+    const markers = L.layerGroup().addTo(map);
+
+    function render() {
+      const query = document.getElementById('search').value.toLowerCase();
+      const minIV = Number(document.getElementById('iv').value);
+      const filtered = pokemon.filter(p =>
+        p.name.toLowerCase().includes(query) && p.iv >= minIV
+      );
+
+      markers.clearLayers();
+      document.getElementById('list').innerHTML = '';
+
+      filtered.forEach(p => {
+        const marker = L.marker([p.lat, p.lng]).addTo(markers);
+        marker.bindPopup(
+          '<b>' + p.name + '</b><br>Demo IV: ' + p.iv + '%'
+        );
+
+        const card = document.createElement('div');
+        card.className = 'pokemon';
+        card.innerHTML =
+          '<strong>🔴 ' + p.name + '</strong>' +
+          '<div class="stats">Demo IV: <span class="tag">' +
+          p.iv + '%</span></div>' +
+          '<div class="stats">Example location · Moncton</div>';
+
+        card.addEventListener('click', () => {
+          map.setView([p.lat, p.lng], 16);
+          marker.openPopup();
+        });
+        document.getElementById('list').appendChild(card);
+      });
+
+      if (!filtered.length) {
+        document.getElementById('list').textContent =
+          'No matching demo Pokémon. Try another search or IV filter.';
+      }
+    }
+
+    document.getElementById('search').addEventListener('input', render);
+    document.getElementById('iv').addEventListener('change', render);
+
+    document.getElementById('locate').addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Location is not supported by this browser.');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => map.setView(
+          [pos.coords.latitude, pos.coords.longitude], 15
+        ),
+        () => alert('Location unavailable. Allow location access in Safari and try again.')
+      );
+    });
+
+    render();
+  </script>
+</body>
+</html>
